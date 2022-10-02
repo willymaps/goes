@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='utf-8' />
+<title>GOES</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" type="text/css" href="./css/mapstyle.css" />
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.js"></script>
+<style type="text/css">
+body {
+    font-family: sans-serif;
+}
+</style>
+</head>
+
+<body>
+<div id="mapWrap">
+    <div class="column left">
+        <h2>GOES-East</h2>
+        <p>Using a Mapbox <a href="https://docs.mapbox.com/mapbox-gl-js/example/video-on-a-map/" targert="_blank">raster video source</a> to show GOES-East imagery from Sept. 28, 2022.</p>
+        <div id="clipLabels">Hide country boundaries</div>
+    </div>
+    <div class="column right">
+        <div id="map"></div>
+    </div>
+</div>
+<div class="credit">
+    <p>Data: <a href="https://www.star.nesdis.noaa.gov/goes/fulldisk.php?sat=G16" target="_blank">NOAA</a></p>
+    <p>Code: <a href="https://github.com/willymaps/goes" target="_blank">Github</a></p>
+</div>
+
+<script>
+let linesHidden = false;
+let playingVideo = true;
+document.getElementById("clipLabels").addEventListener("click", displayLines);
+
+const mapBounds = [
+    [-150, -80], // Southwest coordinates
+    [10, 80] // Northeast coordinates
+];
+
+// please use your own token!
+mapboxgl.accessToken = 'pk.eyJ1Ijoid2lsbGlhbS1kYXZpcyIsImEiOiJja2tiYWtvbWcwMmtzMnBvajh3M2kxZGRuIn0.GeROaHKn2Gbvsg1e8buJEw';
+
+const videoStyle = {
+    'version': 8,
+    "sprite": "mapbox://sprites/william-davis/cl8irrp4y000b15mv6x3qrfqq/7ynps4lwbi3v1xzo06ag5yhh5",
+    'glyphs': 'mapbox://fonts/mapbox/{fontstack}/{range}.pbf',
+    'sources': {
+        'streets': {
+            'type': 'vector',
+            'url': 'mapbox://mapbox.mapbox-streets-v8'
+        },
+        'boundary': {
+            'type': 'vector',
+            'url': 'mapbox://mapbox.country-boundaries-v1'
+        },
+        'video': {
+            'type': 'video',
+            'urls': [
+                './vid/output.mp4'
+            ],
+            'coordinates': [
+                [
+                -151.4587097,
+                76.4588013
+                ],
+                [
+                1.4902903,
+                76.4588013
+                ],
+                [
+                1.4902903,
+                -76.4901987
+                ],
+                [
+                -151.4587097,
+                -76.4901987
+                ]
+            ]
+        }
+    },
+    'layers': [{
+            'id': 'background',
+            'type': 'background',
+            'paint': {
+                'background-color': 'rgb(4,7,14)',
+            }
+        },
+        {
+            'id': 'video',
+            'type': 'raster',
+            'source': 'video',
+            'paint': {
+                'raster-opacity': 1
+            }
+        },
+        {
+            'id': 'lines',
+            'type': 'line',
+            'source': 'boundary',
+            'source-layer': 'country_boundaries',
+            'layout': {
+                'line-join': 'round',
+                'line-cap': 'round'
+            },
+            'paint': {
+                'line-color': '#fff',
+                'line-width': 0.5,
+                'line-opacity': 1
+            }
+        },
+        {
+            "id": "settlement-major-label",
+            "type": "symbol",
+            "source": "streets",
+            "source-layer": "place_label",
+            "minzoom": 2,
+            "maxzoom": 15,
+            "filter": [
+                "all",
+                ["<=", ["get", "filterrank"], 3],
+                [
+                    "match",
+                    ["get", "class"],
+                    "settlement",
+                    ["match", ["get", "worldview"],
+                        ["all", "US"], true, false
+                    ],
+                    "disputed_settlement",
+                    [
+                        "all",
+                        ["==", ["get", "disputed"], "true"],
+                        [
+                            "match",
+                            ["get", "worldview"],
+                            ["all", "US"],
+                            true,
+                            false
+                        ]
+                    ],
+                    false
+                ],
+                [
+                    "step",
+                    ["zoom"],
+                    false,
+                    2,
+                    ["<=", ["get", "symbolrank"], 8],
+                    4,
+                    ["<", ["get", "symbolrank"], 9],
+                    5,
+                    ["<", ["get", "symbolrank"], 10],
+                    7,
+                    ["<", ["get", "symbolrank"], 12],
+                    10,
+                    ["<", ["get", "symbolrank"], 13],
+                    11,
+                    ["<", ["get", "symbolrank"], 15],
+                    12,
+                    ["<", ["get", "symbolrank"], 15],
+                    13,
+                    [">=", ["get", "symbolrank"], 13],
+                    14,
+                    [">=", ["get", "symbolrank"], 15]
+                ]
+            ],
+            "layout": {
+                "text-line-height": 1.1,
+                "text-size": [
+                    "interpolate",
+                    ["cubic-bezier", 0.2, 0, 0.9, 1],
+                    ["zoom"],
+                    3,
+                    ["step", ["get", "symbolrank"], 13, 6, 12],
+                    6,
+                    ["step", ["get", "symbolrank"], 16, 6, 15, 7, 14],
+                    8,
+                    ["step", ["get", "symbolrank"], 18, 9, 17, 10, 15],
+                    15,
+                    [
+                        "step",
+                        ["get", "symbolrank"],
+                        23,
+                        9,
+                        22,
+                        10,
+                        20,
+                        11,
+                        18,
+                        12,
+                        16,
+                        13,
+                        15,
+                        15,
+                        13
+                    ]
+                ],
+                "text-radial-offset": [
+                    "step",
+                    ["zoom"],
+                    ["match", ["get", "capital"], 2, 0.8, 0.75],
+                    8,
+                    0
+                ],
+                "icon-image": [
+                    "step",
+                    ["zoom"],
+                    [
+                        "case",
+                        ["==", ["get", "capital"], 2],
+                        "border-dot-13",
+                        [
+                            "step",
+                            ["get", "symbolrank"],
+                            "dot-11",
+                            9,
+                            "dot-10",
+                            11,
+                            "dot-9"
+                        ]
+                    ],
+                    8,
+                    ""
+                ],
+                "text-font": ["Arial Unicode MS Regular"],
+                "text-justify": [
+                    "step",
+                    ["zoom"],
+                    [
+                        "match",
+                        ["get", "text_anchor"],
+                        ["left", "bottom-left", "top-left"],
+                        "left",
+                        ["right", "bottom-right", "top-right"],
+                        "right",
+                        "center"
+                    ],
+                    8,
+                    "center"
+                ],
+                "text-anchor": [
+                    "step",
+                    ["zoom"],
+                    ["get", "text_anchor"],
+                    8,
+                    "center"
+                ],
+                "text-field": ["get", "name"],
+                "text-max-width": 7
+            },
+            "paint": {
+                "text-color": "hsl(230, 29%, 0%)",
+                "text-halo-color": "hsl(35, 19%, 100%)",
+                "text-halo-width": 1,
+                "text-halo-blur": 1
+            }
+        },
+        {
+            "id": "state-label",
+            "type": "symbol",
+            "source": "streets",
+            "source-layer": "place_label",
+            "minzoom": 3,
+            "maxzoom": 9,
+            "filter": [
+                "match",
+                ["get", "class"],
+                "state",
+                ["match", ["get", "worldview"],
+                    ["all", "US"], true, false
+                ],
+                "disputed_state",
+                [
+                    "all",
+                    ["==", ["get", "disputed"], "true"],
+                    ["match", ["get", "worldview"],
+                        ["all", "US"], true, false
+                    ]
+                ],
+                false
+            ],
+            "layout": {
+                "text-size": [
+                    "interpolate",
+                    ["cubic-bezier", 0.85, 0.7, 0.65, 1],
+                    ["zoom"],
+                    4,
+                    ["step", ["get", "symbolrank"], 10, 6, 9.5, 7, 9],
+                    9,
+                    ["step", ["get", "symbolrank"], 21, 6, 16, 7, 13]
+                ],
+                "text-transform": "uppercase",
+                "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"],
+                "text-field": [
+                    "step",
+                    ["zoom"],
+                    [
+                        "step",
+                        ["get", "symbolrank"],
+                        ["coalesce", ["get", "name_en"],
+                            ["get", "name"]
+                        ],
+                        5,
+                        [
+                            "coalesce",
+                            ["get", "abbr"],
+                            ["get", "name_en"],
+                            ["get", "name"]
+                        ]
+                    ],
+                    5,
+                    ["coalesce", ["get", "name_en"],
+                        ["get", "name"]
+                    ]
+                ],
+                "text-letter-spacing": 0.15,
+                "text-max-width": 6
+            },
+            "paint": {
+                "text-color": "hsl(230, 29%, 0%)",
+                "text-halo-color": "hsl(35, 19%, 100%)",
+                "text-halo-width": 1
+            }
+        },
+        {
+            "id": "country-label",
+            "type": "symbol",
+            "source": "streets",
+            "source-layer": "place_label",
+            "minzoom": 1,
+            "maxzoom": 10,
+            "filter": [
+                "match",
+                ["get", "class"],
+                "country",
+                ["match", ["get", "worldview"],
+                    ["all", "US"], true, false
+                ],
+                "disputed_country",
+                [
+                    "all",
+                    ["==", ["get", "disputed"], "true"],
+                    ["match", ["get", "worldview"],
+                        ["all", "US"], true, false
+                    ]
+                ],
+                false
+            ],
+            "layout": {
+                "text-line-height": 1.1,
+                "text-size": [
+                    "interpolate",
+                    ["cubic-bezier", 0.2, 0, 0.7, 1],
+                    ["zoom"],
+                    1,
+                    ["step", ["get", "symbolrank"], 11, 4, 9, 5, 8],
+                    9,
+                    ["step", ["get", "symbolrank"], 22, 4, 19, 5, 17]
+                ],
+                "text-radial-offset": ["step", ["zoom"], 0.6, 8, 0],
+                "icon-image": "",
+                "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
+                "text-justify": [
+                    "step",
+                    ["zoom"],
+                    [
+                        "match",
+                        ["get", "text_anchor"],
+                        ["left", "bottom-left", "top-left"],
+                        "left",
+                        ["right", "bottom-right", "top-right"],
+                        "right",
+                        "center"
+                    ],
+                    7,
+                    "auto"
+                ],
+                "text-field": ["coalesce", ["get", "name_en"],
+                    ["get", "name"]
+                ],
+                "text-max-width": 6
+            },
+            "paint": {
+                "icon-opacity": [
+                    "step",
+                    ["zoom"],
+                    ["case", ["has", "text_anchor"], 1, 0],
+                    7,
+                    0
+                ],
+                "text-color": "hsl(230, 29%, 0%)",
+                "text-halo-color": [
+                    "interpolate",
+                    ["linear"],
+                    ["zoom"],
+                    2,
+                    "hsla(35, 19%, 100%, 0.75)",
+                    3,
+                    "hsl(35, 19%, 100%)"
+                ],
+                "text-halo-width": 1.25
+            }
+        }
+    ]
+};
+
+const map = new mapboxgl.Map({
+    container: 'map',
+    maxZoom: 4,
+    zoom: 2.5,
+    center: [-75, 30],
+    pitch:30,
+    style: videoStyle,
+    projection: 'globe',
+    maxBounds: mapBounds
+});
+
+map.on('style.load', () => {
+    map.setFog({
+        "range": [1, 10],
+        "color": [
+            "interpolate",
+            ["exponential", 1.2],
+            ["zoom"],
+            5.5,
+            "hsl(240, 12%, 70%)",
+            6,
+            "hsl(0, 0%, 100%)"
+        ],
+        "high-color": [
+            "interpolate",
+            ["exponential", 1.2],
+            ["zoom"],
+            5.5,
+            "hsl(240, 12%, 7%)",
+            6,
+            "hsl(38, 63%, 84%)"
+        ],
+        "space-color": [
+            "interpolate",
+            ["exponential", 1.2],
+            ["zoom"],
+            5.5,
+            "hsl(240, 12%, 9%)",
+            6,
+            "hsl(199, 61%, 80%)"
+        ],
+        "horizon-blend": [
+            "interpolate",
+            ["exponential", 1.2],
+            ["zoom"],
+            5.5,
+            0.008,
+            6,
+            0.15
+        ],
+        "star-intensity": [
+            "interpolate",
+            ["exponential", 1.2],
+            ["zoom"],
+            5.5,
+            0.1,
+            6,
+            0
+        ]
+    });
+});
+
+map.on('click', () => {
+    playingVideo = !playingVideo;
+    if (playingVideo) {
+        map.getSource('video').play();
+    } else {
+        map.getSource('video').pause();
+    }
+});
+
+// btn function
+function displayLines() {
+    if (linesHidden == true) {
+        document.getElementById('clipLabels').innerHTML = "Hide country boundaries";
+        linesHidden = false;
+        map.setPaintProperty('lines', 'line-opacity', 1);
+    } else {
+        linesHidden = true;
+        document.getElementById('clipLabels').innerHTML = "Show country boundaries"
+        map.setPaintProperty('lines', 'line-opacity', 0);
+    }
+};
+</script>
+</body>
+
+</html>
